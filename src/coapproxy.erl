@@ -12,10 +12,14 @@
 
 main() ->
 	Pid0 = spawn(fun openport/0),
-	register(wait, Pid0).
+	Pid1 = spawn(fun serial:serialinit/0),
+	register(proxy, Pid0),
+	register(serial, Pid1).
 main(P) ->
-	Pid1 = spawn(fun() -> openport(P) end),
-	register(wait1, Pid1).
+	Pid2 = spawn(fun() -> openport(P) end),
+	Pid3 = spawn(fun serial:serialinit/0),
+	register(proxy1, Pid2),
+	register(serial, Pid3).
 
 openport() ->
 	case gen_udp:open(?PORT, [binary, inet, {active, true}]) of
@@ -88,15 +92,18 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
 		{ok, Value} ->
 			NewPDU = pdu:add_payload(PDU, binary_to_list(Value), length(binary_to_list(Value))),
 			%send to serial prot
+			serial ! {self(), _MessageID, URI_HOST, URI_PORT, NewPDU},
 			io:format("Everything is ok, prepare to send to serial port~n");
 		{error, Reason} ->
 			%send to serial prot
+			serial ! {self(), _MessageID, URI_HOST, URI_PORT, PDU},
 			io:format("Everything is ok, but without payload, prepare to send to serial port~n")
 	end,
 	receive
-		{FromPid, CoapPkt} ->
+		{back, FromPid, CoapPkt} ->
 			gen_udp:send(Socket, FromIP, FromPort, CoapPkt)
 		after 5000 ->
+			serial ! {delete, self()},
 			case pdu:make_pdu(?COAP_ACKNOWLEDGEMENT, ?COAP_GATEWAY_TIMEOUT, binary_to_list(Token), _MessageID, atom_to_list(URI)) of
 				{ok, TimeoutResponse} ->
 					gen_udp:send(Socket, FromIP, FromPort, TimeoutResponse),

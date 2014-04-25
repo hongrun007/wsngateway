@@ -42,19 +42,19 @@ static ERL_NIF_TERM make_pdu_5(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 	    return enif_make_badarg(env);
 	}
 	if (!enif_get_int(env, argv[0], &type)) {
-	    return enif_make_atom(env, "1");//enif_make_badarg(env);
+	    return enif_make_badarg(env);
 	}
 	if (!enif_get_int(env, argv[1], &method)) {
-        return enif_make_atom(env, "2");//enif_make_badarg(env);
+        return enif_make_badarg(env);
     }
 	if (!enif_get_string(env, argv[2], reinterpret_cast<char *>(token), URI_LENGTH, ERL_NIF_LATIN1)) {
-        return enif_make_atom(env, "3");//enif_make_badarg(env);
+        return enif_make_badarg(env);
     }
 	if (!enif_get_int(env, argv[3], &id)) {
-        return enif_make_atom(env, "4");//enif_make_badarg(env);
+        return enif_make_badarg(env);
     }
 	if (!enif_get_string(env, argv[4], uri, URI_LENGTH, ERL_NIF_LATIN1)) {
-        return enif_make_atom(env, "5");//enif_make_badarg(env);
+        return enif_make_badarg(env);
     }
 	
 	// check enums
@@ -134,7 +134,7 @@ static ERL_NIF_TERM add_option_4(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 {
 		ErlNifBinary buffer,result;
 		CoapPDU *pdu;
-		CoapPDU::Option optnum;
+//		CoapPDU::Option optnum;
 		int optlen, optnum_int;
 		uint8_t *optval;
 
@@ -147,11 +147,11 @@ static ERL_NIF_TERM add_option_4(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 		}
 		if(!enif_get_int(env,argv[1], &optnum_int))
 				return enif_make_badarg(env);
-		optnum = static_cast<CoapPDU::Option>(optnum_int);
+//		optnum = static_cast<CoapPDU::Option>(optnum_int);
 		if(!enif_get_int(env,argv[2], &optlen))
 				return enif_make_badarg(env);
-		optval = (uint8_t *)malloc(sizeof(uint8_t) * (optlen));
-		if(!enif_get_string(env,argv[3], reinterpret_cast<char *>(optval), optlen, ERL_NIF_LATIN1))
+		optval = (uint8_t *)malloc(sizeof(uint8_t) * (optlen+1));
+		if(!enif_get_string(env,argv[3], reinterpret_cast<char *>(optval), optlen+1, ERL_NIF_LATIN1))
 				return enif_make_badarg(env);
 		if(!enif_inspect_iolist_as_binary(env, argv[0], &buffer))
 				return enif_make_badarg(env);
@@ -161,18 +161,21 @@ static ERL_NIF_TERM add_option_4(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 		if(!pdu->validate())
 		{
 				delete pdu;
+				free(optval);
 				return enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env,"Invalid PDU", ERL_NIF_LATIN1));
 		}
 
-		if(pdu->addOption(optnum, optlen, (uint8_t *)optval))
+		if(pdu->addOption(optnum_int, optlen, (uint8_t *)optval))
 		{
 				delete pdu;
+				free(optval);
 				return enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env,"add option failed",ERL_NIF_LATIN1));
 		}
 
 		if(!enif_alloc_binary(pdu->getPDULength(), &result))
 		{
 				delete pdu;
+				free(optval);
 				return enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env,"Unable to allocate the result", ERL_NIF_LATIN1));
 		}
 		memcpy(result.data, pdu->getPDUPointer(), pdu->getPDULength());
@@ -327,20 +330,14 @@ static ERL_NIF_TERM get_option_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 		CoapPDU *pdu;
 		struct CoapPDU::CoapOption *opt;
 		//unwrap all arguments
-		if(!enif_is_number(env, argv[1]))
-				return enif_make_atom(env, "not number");
-		if(!enif_is_binary(env, argv[0]))
-				return enif_make_atom(env, "not binary");
-		if(argc != 2)
-				return enif_make_atom(env, "argc != 2");
 		if(argc != 2 || !enif_is_binary(env, argv[0]) || !enif_is_number(env, argv[1]))
 				return enif_make_badarg(env);
 		if(!enif_inspect_iolist_as_binary(env, argv[0], &buffer))
-				return enif_make_atom(env, "second");//enif_make_badarg(env);
+				return enif_make_badarg(env);
 		if(!enif_get_int(env, argv[1], &get_opt))
-				return enif_make_atom(env, "third");//enif_make_badarg(env);
+				return enif_make_badarg(env);
 		//parse the result
-		pdu = new CoapPDU(buffer.data, buffer.size);
+		pdu = new CoapPDU(buffer.data, 2*buffer.size, buffer.size);
 		if(!pdu->validate())
 		{
 				delete pdu;
@@ -351,7 +348,7 @@ static ERL_NIF_TERM get_option_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 		opt_num = pdu->getNumOptions();
 		for(i=0; i<opt_num; i++)
 		{
-				if(get_opt == opt[i].optionNumber)
+				if(get_opt == (int)opt[i].optionNumber)
 				{
 						delete pdu;
 						return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_string_len(env, (char *)opt[i].optionValuePointer, opt[i].optionValueLength, ERL_NIF_LATIN1));
@@ -359,6 +356,7 @@ static ERL_NIF_TERM get_option_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 		}
 		//can not find match option
 		delete pdu;
+		return enif_make_tuple5(env, enif_make_atom(env, "error"), enif_make_int(env, (int)opt[0].optionNumber), enif_make_int(env, (int)opt[1].optionNumber), enif_make_int(env, (int)opt[2].optionNumber), enif_make_int(env, (int)opt[3].optionNumber));
 		return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_string(env, "can't find match option", ERL_NIF_LATIN1));
 }
 
