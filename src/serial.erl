@@ -11,10 +11,12 @@ serialloop(Socket) ->
 	{ok, Local} = inet_parse:address("127.0.0.1"),
 	receive
 		{udp, Socket, Local, ?SERIAL_C_PORT, Packet} ->
-			<<_:16, BinMid:16,_>> = Packet,
-			IntMid = binary_to_integer(BinMid),
-			case get_keys(IntMid) of
+			{ok, _, _, _, _, Mid} = pdu:get_header(Packet),
+%			IntMid = binary_to_integer(BinMid),
+			io:format("Mid is: ~p~n",[Mid]),
+			case get_keys(Mid) of
 				undefined ->
+					io:format("undefined MessageID\n"),
 					undefined;
 				[PID] ->
 					erase(PID),
