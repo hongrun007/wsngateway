@@ -12,14 +12,10 @@
 
 main() ->
 	Pid0 = spawn(fun openport/0),
-	Pid1 = spawn(fun serial:serialinit/0),
-	register(proxy, Pid0),
-	register(serial, Pid1).
+	register(proxy, Pid0).
 main(P) ->
 	Pid2 = spawn(fun() -> openport(P) end),
-	Pid3 = spawn(fun serial:serialinit/0),
-	register(proxy1, Pid2),
-	register(serial, Pid3).
+	register(proxy1, Pid2).
 
 openport() ->
 	case gen_udp:open(?PORT, [binary, inet, {active, true}]) of
@@ -37,6 +33,7 @@ openport(Port) ->
 		{error, Reason} ->
 			io:format("{error, ~p}~n", [Reason])
 	end.
+
 proxy_recv(S) ->
 	receive
 		{udp, S, FromIP, FromPort, Bin} ->
@@ -65,6 +62,7 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
             io:format("get_option error ~p~n", [{error, URI_HOST}])
 %			exit(no_URI_HOST)
     end,
+	RemoteIP = inet_parse:address(URI_HOST),
     case pdu:get_option(Bin, ?COAP_OPTION_URI_PORT) of
         {ok, URI_PORT} ->
             io:format("Get URI_PORT: ~p~n",[URI_PORT]);
@@ -72,6 +70,7 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
             io:format("get_option error ~p~n", [{error, URI_PORT}])
 %			exit(no_URI_PORT)
     end,
+	RemotePort = list_to_integer(URI_PORT),
     case pdu:get_header(Bin) of
         {ok, _Version, _Type, _Tkl, _Code, _MessageID} ->
             io:format("Get Version: ~p, Type: ~p, Tkl: ~p, Code: ~p, MessageID: ~p~n",[_Version, _Type, _Tkl, _Code, _MessageID]);
@@ -88,22 +87,22 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
 			exit(no_Token)
     end,
 	{ok, PDU} = pdu:make_pdu(_Type, _Code, binary_to_list(Token), _MessageID, atom_to_list(URI)),
+	{ok, Socket_to} = serial:slipinit(),
 	case pdu:get_content(Bin) of
 		{ok, Value} ->
 			NewPDU = pdu:add_payload(PDU, binary_to_list(Value), length(binary_to_list(Value))),
 			%send to serial prot
-			serial ! {self(), _MessageID, URI_HOST, URI_PORT, NewPDU},
-			io:format("Everything is ok, prepare to send to serial port~n");
-		{error, Reason} ->
+			io:format("Everything is ok, prepare to send to serial port~n"),
+			gen_udp:send(Socket_to, RemoteIP, RemotePort, NewPDU);
+		{error, _Reason} ->
 			%send to serial prot
-			serial ! {self(), _MessageID, URI_HOST, URI_PORT, PDU},
-			io:format("Everything is ok, but without payload, prepare to send to serial port~n")
+			io:format("Everything is ok, but without payload, prepare to send to serial port~n"),
+			gen_udp:send(Socket_to, RemoteIP, RemotePort, PDU)
 	end,
 	receive
-		{back, FromPid, CoapPkt} ->
-			gen_udp:send(Socket, FromIP, FromPort, CoapPkt)
+		{udp, Socket_to, RemoteIP, RemotePort, Bin} ->
+			gen_udp:send(Socket, FromIP, FromPort, Bin)
 		after 5000 ->
-			serial ! {delete, self()},
 			case pdu:make_pdu(?COAP_ACKNOWLEDGEMENT, ?COAP_GATEWAY_TIMEOUT, binary_to_list(Token), _MessageID, atom_to_list(URI)) of
 				{ok, TimeoutResponse} ->
 					gen_udp:send(Socket, FromIP, FromPort, TimeoutResponse),
