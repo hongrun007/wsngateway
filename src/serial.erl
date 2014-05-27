@@ -1,9 +1,9 @@
 -module(serial).
 -export([slipinit/0]).
--define(IFADDR, inet_parse:address("2001::a")).
 
 slipinit() ->
-	gen_udp:open(0, [binary, inet6, {active, true}, {ifaddr, ?IFADDR}]).
+	{ok, LocalIP} = inet_parse:address("2001::a"),
+	gen_udp:open(0, [binary, inet6, {active, true}, {ifaddr, LocalIP}]).
 
 serialloop(Socket) ->
 	{ok, Local} = inet_parse:address("127.0.0.1"),

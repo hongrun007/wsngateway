@@ -62,7 +62,7 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
             io:format("get_option error ~p~n", [{error, URI_HOST}])
 %			exit(no_URI_HOST)
     end,
-	RemoteIP = inet_parse:address(URI_HOST),
+	{ok, RemoteIP} = inet_parse:address(URI_HOST),
     case pdu:get_option(Bin, ?COAP_OPTION_URI_PORT) of
         {ok, URI_PORT} ->
             io:format("Get URI_PORT: ~p~n",[URI_PORT]);
