@@ -100,8 +100,8 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
 			gen_udp:send(Socket_to, RemoteIP, RemotePort, PDU)
 	end,
 	receive
-		{udp, Socket_to, RemoteIP, RemotePort, Bin} ->
-			gen_udp:send(Socket, FromIP, FromPort, Bin)
+		{udp, Socket_to, RemoteIP, RemotePort, B} ->
+			gen_udp:send(Socket, FromIP, FromPort, B)
 		after 5000 ->
 			case pdu:make_pdu(?COAP_ACKNOWLEDGEMENT, ?COAP_GATEWAY_TIMEOUT, binary_to_list(Token), _MessageID, atom_to_list(URI)) of
 				{ok, TimeoutResponse} ->
