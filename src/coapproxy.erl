@@ -86,19 +86,19 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
             io:format("get_token error ~p~n", [{error, Token}]),
 			exit(no_Token)
     end,
-	{ok, PDU} = pdu:make_pdu(_Type, _Code, binary_to_list(Token), _MessageID, atom_to_list(URI)),
+%	{ok, PDU} = pdu:make_pdu(_Type, _Code, binary_to_list(Token), _MessageID, atom_to_list(URI)),
 	{ok, Socket_to} = serial:slipinit(),
-	case pdu:get_content(Bin) of
-		{ok, Value} ->
-			NewPDU = pdu:add_payload(PDU, binary_to_list(Value), length(binary_to_list(Value))),
+%	case pdu:get_content(Bin) of
+%		{ok, Value} ->
+%			NewPDU = pdu:add_payload(PDU, binary_to_list(Value), length(binary_to_list(Value))),
 			%send to serial prot
-			io:format("Everything is ok, prepare to send to serial port~n"),
-			gen_udp:send(Socket_to, RemoteIP, RemotePort, NewPDU);
-		{error, _Reason} ->
+%			io:format("Everything is ok, prepare to send to serial port~n"),
+%			gen_udp:send(Socket_to, RemoteIP, RemotePort, NewPDU);
+%		{error, _Reason} ->
 			%send to serial prot
-			io:format("Everything is ok, but without payload, prepare to send to serial port~n"),
-			gen_udp:send(Socket_to, RemoteIP, RemotePort, PDU)
-	end,
+%			io:format("Everything is ok, but without payload, prepare to send to serial port~n"),
+			gen_udp:send(Socket_to, RemoteIP, RemotePort, Bin),
+%	end,
 	receive
 		{udp, Socket_to, RemoteIP, RemotePort, B} ->
 			gen_udp:send(Socket, FromIP, FromPort, B)
