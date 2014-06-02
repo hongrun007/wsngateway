@@ -1,6 +1,9 @@
 -module(serial).
 -export([slipinit/0]).
 
+%% @spec slipinit() ->
+%%		{ok, Socket::socket()} | {error, Reason}
+%% This function initialize the SLIP port
 slipinit() ->
 	{ok, LocalIP} = inet_parse:address("2001::a"),
 	gen_udp:open(0, [binary, inet6, {active, true}, {ifaddr, LocalIP}]).

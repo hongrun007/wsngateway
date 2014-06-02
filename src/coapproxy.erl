@@ -10,9 +10,14 @@
 %-define(COAP_PUT, 3).
 %-define(COAP_DELETE, 4).
 
+%% @spec main()
+%% this is a proxy demon
 main() ->
 	Pid0 = spawn(fun openport/0),
 	register(proxy, Pid0).
+
+%% @spec main(P::integer())
+%% this is a proxy demon can be assign a special udp prot
 main(P) ->
 	Pid2 = spawn(fun() -> openport(P) end),
 	register(proxy1, Pid2).
