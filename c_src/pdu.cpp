@@ -356,7 +356,7 @@ static ERL_NIF_TERM get_option_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 		}
 		//can not find match option
 		delete pdu;
-		return enif_make_tuple5(env, enif_make_atom(env, "error"), enif_make_int(env, (int)opt[0].optionNumber), enif_make_int(env, (int)opt[1].optionNumber), enif_make_int(env, (int)opt[2].optionNumber), enif_make_int(env, (int)opt[3].optionNumber));
+//		return enif_make_tuple5(env, enif_make_atom(env, "error"), enif_make_int(env, (int)opt[0].optionNumber), enif_make_int(env, (int)opt[1].optionNumber), enif_make_int(env, (int)opt[2].optionNumber), enif_make_int(env, (int)opt[3].optionNumber));
 		return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_string(env, "can't find match option", ERL_NIF_LATIN1));
 }
 
