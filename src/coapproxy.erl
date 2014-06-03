@@ -14,19 +14,24 @@
 %% this is a proxy demon
 main() ->
 	Pid0 = spawn(fun openport/0),
-	register(proxy, Pid0).
+	register(proxy, Pid0),
+	Pid1 = spawn(fun openport6/0),
+	register(proxy6, Pid1).
 
 %% @spec main(P::integer())
 %% this is a proxy demon can be assign a special udp prot
 main(P) ->
 	Pid2 = spawn(fun() -> openport(P) end),
-	register(proxy1, Pid2).
+	register(proxy, Pid2),
+	Pid3 = spawn(fun() -> openport6(P) end),
+	register(proxy6, Pid3).
 
 openport() ->
 	case gen_udp:open(?PORT, [binary, inet, {active, true}]) of
 		{ok, Socket} ->
 			io:format("Port:~p opened, wait for messages.~n",[?PORT]),
-			proxy_recv(Socket);
+			% 4 means IPv4
+			proxy_recv(Socket, 4);
 		{error, Reason} ->
 			io:format("{error, ~p}~n", [Reason])
 	end.
@@ -34,25 +39,42 @@ openport(Port) ->
 	case gen_udp:open(Port, [binary, inet, {active, true}]) of
 		{ok, Socket} ->
 			io:format("Port:~p opened, wait for messages.~n",[Port]),
-			proxy_recv(Socket);
+			proxy_recv(Socket, 4);
 		{error, Reason} ->
 			io:format("{error, ~p}~n", [Reason])
 	end.
 
-proxy_recv(S) ->
+openport6() ->
+	case gen_udp:open(?PORT, [binary, inet6, {active, true}]) of
+		{ok, Socket} ->
+			io:format("Port:~p opened, wait for messages.~n",[?PORT]),
+			% 6 means IPv6
+			proxy_recv(Socket, 6);
+		{error, Reason} ->
+			io:format("{error, ~p}~n", [Reason])
+	end.
+openport6(Port) ->
+	case gen_udp:open(Port, [binary, inet6, {active, true}]) of
+		{ok, Socket} ->
+			io:format("Port:~p opened, wait for messages.~n",[Port]),
+			proxy_recv(Socket, 6);
+		{error, Reason} ->
+			io:format("{error, ~p}~n", [Reason])
+	end.
+proxy_recv(S, FromIPvN) ->
 	receive
 		{udp, S, FromIP, FromPort, Bin} ->
-			spawn(fun() -> wait_response(FromIP, FromPort, S, Bin) end),
-			proxy_recv(S);
+			spawn(fun() -> wait_response(FromIP, FromPort, S, Bin, FromIPvN) end),
+			proxy_recv(S, FromIPvN);
 		{error, Reason} ->
 			io:format("{get error message, ~p}~n", [Reason]),
-			proxy_recv(S);
+			proxy_recv(S, FromIPvN);
 		stop ->
 		gen_udp:close(S),
 		io:format("UDP port closed~n")
 	end.
 
-wait_response(FromIP, FromPort, Socket, Bin) ->
+wait_response(FromIP, FromPort, Socket, Bin, FromIPvN) ->
 	case pdu:get_URI(Bin) of
         {ok, URI} ->
             io:format("Get request message from:~p:~p with URI: ~p~n",[FromIP, FromPort, URI]);
@@ -92,7 +114,12 @@ wait_response(FromIP, FromPort, Socket, Bin) ->
 			exit(no_Token)
     end,
 %	{ok, PDU} = pdu:make_pdu(_Type, _Code, binary_to_list(Token), _MessageID, atom_to_list(URI)),
-	{ok, Socket_to} = serial:slipinit(),
+	{ok, Socket_to} = case FromIPvN of
+		4 ->
+			gen_udp:open(0, [binary, inet, {active, true}]);
+		6 ->
+			gen_udp:open(0, [binary, inet6, {active, true}])
+	end,
 %	case pdu:get_content(Bin) of
 %		{ok, Value} ->
 %			NewPDU = pdu:add_payload(PDU, binary_to_list(Value), length(binary_to_list(Value))),
