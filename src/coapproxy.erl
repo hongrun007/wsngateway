@@ -29,7 +29,7 @@ main(P) ->
 openport() ->
 	case gen_udp:open(?PORT, [binary, inet, {active, true}]) of
 		{ok, Socket} ->
-			io:format("Port:~p opened, wait for messages.~n",[?PORT]),
+			io:format("IPv4 Port:~p opened, wait for messages.~n",[?PORT]),
 			% 4 means IPv4
 			proxy_recv(Socket, 4);
 		{error, Reason} ->
@@ -38,25 +38,25 @@ openport() ->
 openport(Port) ->
 	case gen_udp:open(Port, [binary, inet, {active, true}]) of
 		{ok, Socket} ->
-			io:format("Port:~p opened, wait for messages.~n",[Port]),
+			io:format("IPv4 Port:~p opened, wait for messages.~n",[Port]),
 			proxy_recv(Socket, 4);
 		{error, Reason} ->
 			io:format("{error, ~p}~n", [Reason])
 	end.
 
 openport6() ->
-	case gen_udp:open(?PORT, [binary, inet6, {active, true}]) of
+	case gen_udp:open(?PORT + 1, [binary, inet6, {active, true}]) of
 		{ok, Socket} ->
-			io:format("Port:~p opened, wait for messages.~n",[?PORT]),
+			io:format("IPv6 Port:~p opened, wait for messages.~n",[?PORT + 1]),
 			% 6 means IPv6
 			proxy_recv(Socket, 6);
 		{error, Reason} ->
 			io:format("{error, ~p}~n", [Reason])
 	end.
 openport6(Port) ->
-	case gen_udp:open(Port, [binary, inet6, {active, true}]) of
+	case gen_udp:open(Port + 1, [binary, inet6, {active, true}]) of
 		{ok, Socket} ->
-			io:format("Port:~p opened, wait for messages.~n",[Port]),
+			io:format("IPv6 Port:~p opened, wait for messages.~n",[Port+1]),
 			proxy_recv(Socket, 6);
 		{error, Reason} ->
 			io:format("{error, ~p}~n", [Reason])
@@ -116,9 +116,9 @@ wait_response(FromIP, FromPort, Socket, Bin, FromIPvN) ->
 %	{ok, PDU} = pdu:make_pdu(_Type, _Code, binary_to_list(Token), _MessageID, atom_to_list(URI)),
 	{ok, Socket_to} = case FromIPvN of
 		4 ->
-			gen_udp:open(0, [binary, inet, {active, true}]);
+			gen_udp:open(0, [binary, inet6, {active, true}]);
 		6 ->
-			gen_udp:open(0, [binary, inet6, {active, true}])
+			gen_udp:open(0, [binary, inet, {active, true}])
 	end,
 %	case pdu:get_content(Bin) of
 %		{ok, Value} ->
