@@ -97,7 +97,14 @@ wait_response(FromIP, FromPort, Socket, Bin, FromIPvN) ->
             io:format("get_option error ~p~n", [{error, URI_PORT}])
 %			exit(no_URI_PORT)
     end,
-	RemotePort = list_to_integer(URI_PORT),
+	case FromIPvN of
+		4->
+			RemotePort = list_to_integer(URI_PORT);
+		6 ->
+			Temp = [0|URI_PORT],
+			[X1,X2,X3] = Temp,
+			RemotePort = X2 *256 + X3
+	end,
     case pdu:get_header(Bin) of
         {ok, _Version, _Type, _Tkl, _Code, _MessageID} ->
             io:format("Get Version: ~p, Type: ~p, Tkl: ~p, Code: ~p, MessageID: ~p~n",[_Version, _Type, _Tkl, _Code, _MessageID]);
