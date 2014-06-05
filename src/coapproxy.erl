@@ -120,27 +120,18 @@ wait_response(FromIP, FromPort, Socket, Bin, FromIPvN) ->
             io:format("get_token error ~p~n", [{error, Token}]),
 			exit(no_Token)
     end,
-%	{ok, PDU} = pdu:make_pdu(_Type, _Code, binary_to_list(Token), _MessageID, atom_to_list(URI)),
 	{ok, Socket_to} = case FromIPvN of
 		4 ->
 			gen_udp:open(0, [binary, inet6, {active, true}]);
 		6 ->
 			gen_udp:open(0, [binary, inet, {active, true}])
 	end,
-%	case pdu:get_content(Bin) of
-%		{ok, Value} ->
-%			NewPDU = pdu:add_payload(PDU, binary_to_list(Value), length(binary_to_list(Value))),
-			%send to serial prot
-%			io:format("Everything is ok, prepare to send to serial port~n"),
-%			gen_udp:send(Socket_to, RemoteIP, RemotePort, NewPDU);
-%		{error, _Reason} ->
-			%send to serial prot
-%			io:format("Everything is ok, but without payload, prepare to send to serial port~n"),
-			gen_udp:send(Socket_to, RemoteIP, RemotePort, Bin),
-%	end,
+	gen_udp:send(Socket_to, RemoteIP, RemotePort, Bin),
+	%% send the packet and wait for the response
 	receive
 		{udp, Socket_to, RemoteIP, RemotePort, B} ->
 			gen_udp:send(Socket, FromIP, FromPort, B)
+		%% after 5 seconds the gateway send back timeout information
 		after 5000 ->
 			case pdu:make_pdu(?COAP_ACKNOWLEDGEMENT, ?COAP_GATEWAY_TIMEOUT, binary_to_list(Token), _MessageID, atom_to_list(URI)) of
 				{ok, TimeoutResponse} ->

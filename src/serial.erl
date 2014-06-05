@@ -8,6 +8,7 @@ slipinit() ->
 	{ok, LocalIP} = inet_parse:address("2001::a"),
 	gen_udp:open(0, [binary, inet6, {active, true}, {ifaddr, LocalIP}]).
 
+%% this is not used in the project.
 serialloop(Socket) ->
 	{ok, Local} = inet_parse:address("127.0.0.1"),
 	receive
