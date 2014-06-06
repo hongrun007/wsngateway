@@ -132,14 +132,14 @@ wait_response(FromIP, FromPort, Socket, Bin, FromIPvN) ->
 	{_, A3, A4} = now(),
 	io:format("From client at: ~p seconds, ~p microseconds\n", [A1, A2]),
 	io:format("Leave proxy at: ~p seconds, ~p microseconds\n", [A3, A4]),
-	io:format("Process in proxy use: ~p seconds, ~p microseconds\n",[A3-A1, A4-A2]),
+	io:format("Process in proxy use: ~p seconds\n",[((A3*1000000+A4)-(A1*1000000+A2))/1000000]),
 	receive
 		{udp, Socket_to, RemoteIP, RemotePort, B} ->
 			{_, A5, A6} = now(),
 			io:formamt("Round trip time from proxy to sensor: ~p seconds, ~p microseconds\n", [A5-A3, A6-A4]),
 			gen_udp:send(Socket, FromIP, FromPort, B),
 			{_, A7, A8} = now(),
-			io:format("Process time to forward packet: ~p seconds, ~p microseconds\n", [A7-A5, A8-A6])
+			io:format("Process time to forward packet: ~p seconds\n", [((A7*1000000+A8)-(A5*1000000+A6))/1000000])
 		%% after 5 seconds the gateway send back timeout information
 		after 5000 ->
 			case pdu:make_pdu(?COAP_ACKNOWLEDGEMENT, ?COAP_GATEWAY_TIMEOUT, binary_to_list(Token), _MessageID, atom_to_list(URI)) of
