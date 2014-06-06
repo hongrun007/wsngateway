@@ -136,7 +136,7 @@ wait_response(FromIP, FromPort, Socket, Bin, FromIPvN) ->
 	receive
 		{udp, Socket_to, RemoteIP, RemotePort, B} ->
 			{_, A5, A6} = now(),
-			io:formamt("Round trip time from proxy to sensor: ~p seconds, ~p microseconds\n", [A5-A3, A6-A4]),
+			io:formamt("Round trip time from proxy to sensor: ~p seconds\n", [((A5*1000000+A6)-(A3*1000000+A4))]),
 			gen_udp:send(Socket, FromIP, FromPort, B),
 			{_, A7, A8} = now(),
 			io:format("Process time to forward packet: ~p seconds\n", [((A7*1000000+A8)-(A5*1000000+A6))/1000000])
